@@ -1,0 +1,97 @@
+# render.yaml — Render Blueprint for Afrishop.
+# Deploy via: Render Dashboard → New → Blueprint → point at this repo.
+# Everything here is configuration only — no application code is modified
+# or bypassed by this file. Security behavior (hard-fail on missing
+# SESSION_SECRET, refusal to silently use local disk for uploads in
+# production, same-origin-only CORS by default) is preserved exactly as
+# server.js already enforces it; this file supplies the values that
+# satisfy those checks rather than working around them.
+
+services:
+  - type: web
+    name: afrishop
+    env: node
+    plan: starter          # bump to standard/pro once you have real traffic
+    region: oregon          # pick the region closest to your users/Supabase project
+
+    # --- Repo layout ---
+    # If server.js and package.json sit directly in your repo's root,
+    # DELETE the rootDir line below entirely.
+    # If your repo has everything nested inside an `afrishop/` folder
+    # (this is what causes "Couldn't find a package.json"), keep it:
+    rootDir: afrishop
+
+    buildCommand: npm install
+    startCommand: npm start
+
+    # Node version is also pinned via the committed .node-version file
+    # (22.22.2) — Render reads that automatically. No NODE_VERSION env
+    # var is needed here as long as .node-version is present in rootDir.
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Render injects PORT automatically — do not set it manually here.
+      # server.js already reads process.env.PORT and binds 0.0.0.0.
+
+      # Generated automatically by Render on first deploy. This satisfies
+      # the existing hard-fail in lib/auth.js — the app still refuses to
+      # boot without it; this just makes sure it's never actually missing.
+      - key: SESSION_SECRET
+        generateValue: true
+
+      # --- Fill these in on the Render dashboard after the blueprint
+      # creates the service (sync: false means Render will NOT prompt for
+      # or store a value from this file — you paste the real value in
+      # the dashboard, so it never touches Git). ---
+
+      - key: DATABASE_URL
+        sync: false        # Supabase POOLER URI, port 6543 — see checklist below
+
+      - key: PGSSL
+        value: "true"
+
+      - key: CORS_ORIGIN
+        sync: false        # your exact frontend origin, e.g. https://afrishop.onrender.com
+                            # (same value as this service's own URL, since frontend + API
+                            # are served by the same Node process — see note below)
+
+      - key: SUPABASE_URL
+        sync: false
+
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      - key: SUPABASE_STORAGE_BUCKET
+        value: product-images
+
+      # --- Optional: payments (leave unset to keep those routes returning
+      # 501 rather than fail — the app already handles that gracefully) ---
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_SHORTCODE
+        sync: false
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_ENV
+        value: sandbox
+      - key: MPESA_CALLBACK_URL
+        sync: false        # must be https://<your-render-url>/api/webhooks/mpesa/callback
+
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_ENVIRONMENT
+        value: sandbox
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: PAYPAL_RETURN_URL
+        sync: false        # https://<your-render-url>/order-confirmation
+      - key: PAYPAL_CANCEL_URL
+        sync: false        # https://<your-render-url>/checkout
+      - key: KES_TO_USD_RATE
+        value: "0.0077"
